@@ -15,13 +15,19 @@ foreach ($proj in @("hwjweb23", "SamSplitSystem")) {
     $wd = "$cb\wtpwebapps\$proj"
     if (-not (Test-Path $sd)) { continue }
     Get-ChildItem $sd -Recurse -Filter "*.java" | ForEach-Object { javac -encoding UTF-8 -cp "$od;$cp" -d $od $_.FullName 2>$null }
-    # copy all class packages (not just com)
+    # copy all class packages
     foreach ($pkg in @("com", "javabean", "servlet")) {
         if (Test-Path "$od\$pkg") { Copy-Item "$od\$pkg" "$wd\WEB-INF\classes\" -Recurse -Force }
     }
+    # copy root JSPs
     Copy-Item "D:\eclipse\workspace\$proj\WebContent\*.jsp" "$wd\" -Force -ErrorAction SilentlyContinue
+    # copy JSP subdirectories
+    foreach ($sub in @("student", "coach", "admin", "META-INF")) {
+        $srcSub = "D:\eclipse\workspace\$proj\WebContent\$sub"
+        if (Test-Path $srcSub) { Copy-Item $srcSub "$wd\" -Recurse -Force }
+    }
     Copy-Item "D:\eclipse\workspace\$proj\WebContent\WEB-INF\web.xml" "$wd\WEB-INF\web.xml" -Force -ErrorAction SilentlyContinue
-    # copy static assets (common dir)
+    # copy static assets
     if (Test-Path "D:\eclipse\workspace\$proj\WebContent\common") {
         Copy-Item "D:\eclipse\workspace\$proj\WebContent\common" "$wd\" -Recurse -Force
     }
@@ -35,7 +41,7 @@ Start-Process -FilePath "$jh\bin\java.exe" -ArgumentList $javaArgs -WindowStyle 
 
 # wait
 Write-Host "Waiting..."
-for ($i = 0; $i -lt 20; $i++) {
+for ($i = 0; $i -lt 30; $i++) {
     Start-Sleep -Seconds 1
     $check = netstat -ano | Select-String ":8080.*LISTEN"
     if ($check) { Write-Host "Tomcat ready! http://localhost:8080/" -ForegroundColor Green; return }
